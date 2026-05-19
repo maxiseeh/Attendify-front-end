@@ -1,7 +1,7 @@
 import { useContext } from "react";
-import Navbar from "../components/layout/Navbar";
-import Sidebar from "../components/layout/Sidebar";
-import { AuthContext } from "../AuthContext";
+import Navbar from "../../components/layout/Navbar";
+import Sidebar from "../../components/layout/Sidebar";
+import { AuthContext } from "../../AuthContext";
 
 function Dashboard() {
   const { user } = useContext(AuthContext);

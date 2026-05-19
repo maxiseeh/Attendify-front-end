@@ -1,8 +1,7 @@
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../AuthContext";
+import { AuthContext } from "../../AuthContext";
 
-// login page - first page the user sees
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -16,20 +15,20 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    setError("");
-    setLoading(true);
+setError("");
+setLoading(true);
 
-    try {
-      await login(email, password);
+try {
+  await login(email, password);
 
-      navigate("/dashboard");
-    } catch (err) {
-      console.log("login error:", err);
+  navigate("/dashboard");
+} catch (err) {
+  console.log("login error:", err);
 
-      setError("Wrong email or password. Try again.");
-    } finally {
-      setLoading(false);
-    }
+  setError("Wrong email or password. Try again.");
+} finally {
+  setLoading(false);
+}
   };
 
   return (
@@ -39,49 +38,49 @@ function Login() {
           Attendify
         </h2>
 
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+    <form onSubmit={handleLogin}>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Email
+        </label>
 
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter your email"
+          required
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+        />
       </div>
-    </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
+
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+          required
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+        />
+      </div>
+
+      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
+      >
+        {loading ? "Logging in..." : "Login"}
+      </button>
+    </form>
+  </div>
+</div>
   );
 }
 

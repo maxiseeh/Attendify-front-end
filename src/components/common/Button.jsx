@@ -1,5 +1,4 @@
 // reusable button component
-
 function Button({ children, onClick, type = 'button', disabled = false, className = '' }) {
   return (
     <button
@@ -12,5 +11,4 @@ function Button({ children, onClick, type = 'button', disabled = false, classNam
     </button>
   )
 }
-
 export default Button

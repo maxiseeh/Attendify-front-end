@@ -1,5 +1,4 @@
 // simple input field with label
-
 function Input({ label, id, type = 'text', value, onChange, placeholder = '', required = false }) {
   return (
     <div className="flex flex-col gap-1 mb-3">
@@ -20,5 +19,4 @@ function Input({ label, id, type = 'text', value, onChange, placeholder = '', re
     </div>
   )
 }
-
 export default Input

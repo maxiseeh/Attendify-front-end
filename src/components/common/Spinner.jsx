@@ -1,5 +1,4 @@
 // loading spinner
-
 function Spinner() {
   return (
     <div className="flex justify-center items-center py-6">
@@ -7,5 +6,4 @@ function Spinner() {
     </div>
   )
 }
-
 export default Spinner

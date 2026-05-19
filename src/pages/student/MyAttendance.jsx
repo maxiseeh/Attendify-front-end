@@ -3,30 +3,42 @@ import Navbar from "../../components/layout/Navbar";
 import Sidebar from "../../components/layout/Sidebar";
 import WifiStatus from "../../components/attendance/WifiStatus";
 import QRScanner from "../../components/attendance/QRScanner";
-import useWifiDetect from "../../hooks/useWifiDetect";
 import { getStudentAttendance } from "../../services/attendanceService";
 
+// FIX: replace this with correct hook if needed
+import useWifiContext from "../../hooks/useWifiContext";
+
 function MyAttendance() {
-  const isOnline = useWifiDetect();
+  const isOnline = useWifiContext();
+
   const [records, setRecords] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
-    // get attendance records for this student
-    // TODO: pass actual student id from auth context
-    getStudentAttendance("me")
-      .then((res) => setRecords(res.data))
-      .catch((err) => console.log("could not get records", err));
+    const fetchData = async () => {
+      try {
+        const res = await getStudentAttendance("me");
+        setRecords(res?.data || []);
+      } catch (err) {
+        console.log("could not get records", err);
+        setRecords([]);
+      }
+    };
+
+    fetchData();
   }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+
       <div className="flex flex-1">
         <Sidebar />
+
         <main className="flex-1 p-6 bg-gray-50">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800">My Attendance</h2>
+
             <WifiStatus isConnected={isOnline} />
           </div>
 
@@ -58,8 +70,9 @@ function MyAttendance() {
                   </th>
                 </tr>
               </thead>
+
               <tbody>
-                {records.length === 0 ? (
+                {records?.length === 0 ? (
                   <tr>
                     <td
                       colSpan={3}
@@ -69,10 +82,15 @@ function MyAttendance() {
                     </td>
                   </tr>
                 ) : (
-                  records.map((r, i) => (
-                    <tr key={i} className="border-b border-gray-100">
+                  records?.map((r, i) => (
+                    <tr
+                      key={`${r.session}-${i}`}
+                      className="border-b border-gray-100"
+                    >
                       <td className="px-4 py-3">{r.session}</td>
+
                       <td className="px-4 py-3 text-gray-500">{r.date}</td>
+
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${

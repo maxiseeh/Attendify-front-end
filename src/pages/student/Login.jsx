@@ -15,18 +15,21 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
     setError("");
     setLoading(true);
 
     try {
       await login(email, password);
+
       navigate("/dashboard");
     } catch (err) {
       console.log("login error:", err);
-      setError("Wrong email or password. Try again.");
-    }
 
-    setLoading(false);
+      setError("Wrong email or password. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +44,7 @@ function Login() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email
             </label>
+
             <input
               type="email"
               value={email}
@@ -55,6 +59,7 @@ function Login() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
+
             <input
               type="password"
               value={password}

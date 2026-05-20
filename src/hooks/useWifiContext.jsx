@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 // custom hook to check if user is online
 // TODO: figure out how to check actual campus wifi SSID
 
-function useWifiDetect() {
+function useWifiContext() {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
 
   useEffect(() => {
@@ -23,4 +23,4 @@ function useWifiDetect() {
   return isOnline
 }
 
-export default useWifiDetect
+export default useWifiContext

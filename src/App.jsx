@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import Login from './pages/student/Login'
+import Dashboard from './pages/student/Dashboard'
 import Analytics from './pages/admin/Analytics'
 import SessionManager from './pages/faculty/SessionManager'
 import MyAttendance from './pages/student/MyAttendance'

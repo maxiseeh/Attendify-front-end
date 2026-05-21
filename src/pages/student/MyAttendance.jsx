@@ -13,25 +13,29 @@ function MyAttendance() {
   const { sessions, fetchSessions, markPresent, getStudentRecords } = useContext(AttendanceContext);
   const isOnline = useWifiContext();
   const [showScanner, setShowScanner] = useState(false);
-  const [scanStatus, setScanStatus] = useState(null); // 'success' | 'error'
+  const [scanStatus, setScanStatus] = useState(null);
   const [scanMessage, setScanMessage] = useState("");
-  const [tab, setTab] = useState("sessions"); // 'sessions' | 'history'
+  const [tab, setTab] = useState("sessions");
+  const [myRecords, setMyRecords] = useState([]);
   const wifiMarkedRef = useRef(false);
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
-  const myRecords = getStudentRecords(user?.id);
+  useEffect(() => {
+    if (!user?.id) return;
+    getStudentRecords(user.id).then(setMyRecords);
+  }, [user?.id, sessions]);
+
   const markedSessionIds = new Set(myRecords.map(r => r.session_id));
 
   // Auto-mark present on active sessions when WiFi is connected
   useEffect(() => {
     if (!isOnline || !user?.id || wifiMarkedRef.current) return;
-    const activeSessions = sessions.filter(s => s.status === "Active");
+    const activeSessions = sessions.filter(s => s.status === "Active" || s.is_active);
     if (activeSessions.length === 0) return;
 
     wifiMarkedRef.current = true;
     activeSessions.forEach(async (session) => {
-      if (markedSessionIds.has(session.id)) return;
       const result = await markPresent({
         sessionId: session.id,
         studentId: user.id,
@@ -44,7 +48,7 @@ function MyAttendance() {
         setTimeout(() => setScanStatus(null), 6000);
       }
     });
-  }, [isOnline, sessions, user]);
+  }, [isOnline]); // only re-run when WiFi status changes, not on every session update
 
   // Reset wifi auto-mark when going offline so it can re-trigger on reconnect
   useEffect(() => {
@@ -69,7 +73,7 @@ function MyAttendance() {
       setTimeout(() => setScanStatus(null), 5000);
       return;
     }
-    if (session.status !== "Active") {
+    if (session.status !== "Active" && session.is_active !== true) {
       setScanStatus("error");
       setScanMessage("This session is no longer active.");
       setTimeout(() => setScanStatus(null), 5000);

@@ -41,7 +41,7 @@ function Login() {
       await login(loginEmail, loginPassword);
       navigate("/dashboard");
     } catch {
-      // error shown from authError
+      
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ function Login() {
       await register({ name: signupName, email: signupEmail, password: signupPassword, role: signupRole });
       navigate("/dashboard");
     } catch {
-      // error shown from authError
+    
     } finally {
       setLoading(false);
     }

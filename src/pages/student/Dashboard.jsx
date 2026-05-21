@@ -71,8 +71,7 @@ function Dashboard() {
         }));
 
       setRecentSessions(recent);
-    } catch (err) {
-      console.log("Dashboard fetch error:", err);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -96,8 +95,7 @@ function Dashboard() {
           ? `${Math.round((s.present_count / s.total_students) * 100)}%`
           : "0%",
       })));
-    } catch (err) {
-      console.log("Admin dashboard fetch error:", err);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -115,6 +113,7 @@ function Dashboard() {
     { label: "Avg Attendance", value: loading ? "..." : adminStats.avgAttendance, icon: Activity, color: "text-emerald-400", bg: "bg-emerald-400/10" },
   ];
 
+  // ── FACULTY VIEW ──────────────────────────────────────────────
   if (isFaculty) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors">
@@ -124,7 +123,7 @@ function Dashboard() {
           <main className="p-10 flex flex-col items-center justify-center gap-6">
             <div className="text-center">
               <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">
-                Welcome, {user?.name || "Faculty"} 
+                Welcome, {user?.name || "Faculty"} 👋
               </h2>
               <p className="text-slate-400 font-medium">Manage your attendance sessions from the Sessions page.</p>
             </div>
@@ -141,6 +140,7 @@ function Dashboard() {
     );
   }
 
+  // ── ADMIN VIEW ────────────────────────────────────────────────
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 flex transition-colors">
@@ -232,7 +232,7 @@ function Dashboard() {
     );
   }
 
-  
+  // ── STUDENT VIEW ──────────────────────────────────────────────
   const attendancePct = stats.total > 0 ? Math.round((stats.attended / stats.total) * 100) : 0;
 
   return (

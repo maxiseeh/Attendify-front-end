@@ -1,17 +1,22 @@
 import api from './api'
- 
-// get all attendance records
-export const getAllAttendance = () => api.get('/attendance')
- 
-// get records for one student
-export const getStudentAttendance = (studentId) => api.get(`/attendance/student/${studentId}`)
- 
-// mark attendance (student submits)
+
+// sessions
+export const getSessions = () => api.get('/sessions/')          // teacher: own sessions
+export const getAllSessions = () => api.get('/sessions/all')     // students/admins: all sessions
+
+export const createSession = (data) => api.post('/sessions/', data)
+
+// attendance
 export const markAttendance = (data) => api.post('/attendance/mark', data)
- 
-// create a new session (faculty)
-export const createSession = (data) => api.post('/attendance/session', data)
- 
-// get all sessions
-export const getSessions = () => api.get('/attendance/sessions')
- 
+
+export const getStudentAttendance = (studentId) => api.get(`/attendance/student/${studentId}`)
+
+export const getSessionAttendance = (sessionId) => api.get(`/attendance/session/${sessionId}`)
+
+// devices
+export const registerDevice = (data) => api.post('/devices/register', data)
+
+export const getUserDevices = (userId) => api.get(`/devices/user/${userId}`)
+
+// connection logs
+export const logConnection = (data) => api.post('/connections/log', data)

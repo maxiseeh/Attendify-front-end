@@ -38,8 +38,11 @@ function Dashboard() {
   useEffect(() => {
     if (isAdmin) fetchAdminData();
     else if (isFaculty) fetchTmData();
-    else { fetchStudentStats(); fetchStudentData(); }
-  }, [isAdmin, isFaculty]);
+    else {
+      fetchStudentStats();
+      fetchStudentData();
+    }
+  }, []);
 
   const fetchStudentData = async () => {
     setLoading(true);
@@ -297,7 +300,6 @@ function Dashboard() {
       <div className="flex-1 flex flex-col ml-64">
         <Navbar title="Student Space" />
         <main className="p-10 space-y-10">
-          {/* Hero banner */}
           <div className="relative p-10 rounded-[2.5rem] bg-slate-900 text-white overflow-hidden shadow-2xl border border-white/5">
             <div className="relative z-10">
               <h2 className="text-4xl font-extrabold mb-2 tracking-tight">Hey {user?.name || "there"}! 👋</h2>
@@ -320,7 +322,6 @@ function Dashboard() {
             <div className="absolute bottom-0 right-1/4 w-40 h-40 bg-cyan-500/10 rounded-full blur-[60px]"></div>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {studentHighlights.map((item, i) => (
               <div key={i} className="glass-card p-10 flex items-center justify-between group hover:scale-[1.02] transition-transform duration-300 dark:bg-slate-900/50 dark:border-slate-800">
@@ -335,8 +336,7 @@ function Dashboard() {
             ))}
           </div>
 
-          {/* Attendance rate bar */}
-          {stats.total > 0 && (
+          {studentStats.total > 0 && (
             <div className="glass-card p-8 dark:bg-slate-900/50 dark:border-slate-800">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -359,7 +359,6 @@ function Dashboard() {
             </div>
           )}
 
-          {/* Recent sessions */}
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Recent Attended Sessions</h3>
             {loading ? (

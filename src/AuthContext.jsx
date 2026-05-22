@@ -1,14 +1,12 @@
 import { createContext, useState, useEffect } from 'react'
-import { loginUser, registerUser } from './services/authService'
+import { loginUser, registerUser, saveMac } from './services/authService'
 
 export const AuthContext = createContext()
 
-// decode JWT payload without a library
 function decodeToken(token) {
   try {
     const payload = token.split('.')[1]
     const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
-    // backend puts email in 'sub', we also stored name/role at register time in localStorage
     return decoded
   } catch {
     return null
@@ -22,7 +20,7 @@ function getUserFromToken(token) {
   return {
     email: stored.email || decoded.email || decoded.sub,
     name: stored.name || decoded.name || decoded.sub || 'User',
-    role: decoded.role || stored.role || 'student',
+    role: stored.role || decoded.role || 'student',
     id: stored.id || parseInt(decoded.sub) || decoded.sub,
   }
 }
@@ -36,21 +34,36 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('access_token')
     if (token) {
       const u = getUserFromToken(token)
-      if (u) setUser(u)
-      else localStorage.removeItem('access_token')
+      if (u) {
+        // force re-login if role is stale (old lecturer value)
+        if (u.role === 'lecturer') {
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('user_profile')
+          setLoading(false)
+          return
+        }
+        setUser(u)
+      } else {
+        localStorage.removeItem('access_token')
+      }
     }
     setLoading(false)
   }, [])
 
-  const login = async (email, password, role) => {
+  const login = async (email, password, passphrase) => {
     setError(null)
     try {
-      const res = await loginUser(email, password)
+      const res = await loginUser(email, password, passphrase)
       const token = res.data.access_token
-      const userData = res.data.user  // backend now returns full user object
+      const userData = res.data.user
       localStorage.setItem('access_token', token)
       localStorage.setItem('user_profile', JSON.stringify(userData))
       setUser(userData)
+      // save MAC if user has one stored locally but not on server
+      const storedMac = localStorage.getItem('device_mac')
+      if (storedMac && !userData.mac_address) {
+        saveMac(storedMac).catch(() => {})
+      }
       return userData
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.message || 'Login failed. Please try again.'
@@ -59,11 +72,10 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const register = async ({ name, email, password, role }) => {
+  const register = async ({ name, email, password, role, batch_code }) => {
     setError(null)
     try {
-      await registerUser({ name, email, password, role })
-      // auto login after register — login now returns full user object
+      await registerUser({ name, email, password, role, batch_code })
       const res = await loginUser(email, password)
       const token = res.data.access_token
       const userData = res.data.user

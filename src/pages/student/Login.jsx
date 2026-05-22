@@ -2,16 +2,16 @@ import { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext";
 import { ThemeContext } from "../../ThemeContext";
-import { LogIn, UserPlus, Rocket, ShieldCheck, Sun, Moon, Eye, EyeOff, KeyRound } from "lucide-react";
-
-const STAFF_KEY = "STAFF-2026";
+import { LogIn, UserPlus, Rocket, ShieldCheck, Sun, Moon, Eye, EyeOff, KeyRound, Lock, Cpu } from "lucide-react";
 
 function Login() {
-  const [tab, setTab] = useState("login"); // 'login' | 'signup'
+  const [tab, setTab] = useState("login");
 
   // login fields
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginPassphrase, setLoginPassphrase] = useState("");
+  const [showPassphrase, setShowPassphrase] = useState(false);
 
   // signup fields
   const [signupName, setSignupName] = useState("");
@@ -19,7 +19,8 @@ function Login() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm] = useState("");
   const [signupRole, setSignupRole] = useState("student");
-  const [staffKey, setStaffKey] = useState("");
+  const [batchCode, setBatchCode] = useState("");
+  const [macAddress, setMacAddress] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,18 +31,22 @@ function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
+    if (user) {
+      if (user.role === "admin") navigate("/admin/analytics", { replace: true });
+      else if (user.role === "technical_mentor") navigate("/faculty/sessions", { replace: true });
+      else navigate("/dashboard", { replace: true });
+    }
   }, [user, navigate]);
+
+  const isAdminEmail = loginEmail.toLowerCase().includes("admin");
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLocalError("");
     setLoading(true);
     try {
-      await login(loginEmail, loginPassword);
-      navigate("/dashboard");
+      await login(loginEmail, loginPassword, isAdminEmail ? loginPassphrase : undefined);
     } catch {
-      
     } finally {
       setLoading(false);
     }
@@ -58,16 +63,30 @@ function Login() {
       setLocalError("Password must be at least 6 characters.");
       return;
     }
-    if (signupRole === "teacher" && staffKey !== STAFF_KEY) {
-      setLocalError("Invalid staff access key. Contact your administrator.");
+    if (!macAddress.trim()) {
+      setLocalError("MAC address is required.");
+      return;
+    }
+    if (!/^([0-9A-Fa-f]{2}[:\-]){5}([0-9A-Fa-f]{2})$/.test(macAddress.trim())) {
+      setLocalError("Invalid MAC address format. Example: AA:BB:CC:DD:EE:FF");
+      return;
+    }
+    if (signupRole === "technical_mentor" && !batchCode.startsWith("STAFF-")) {
+      setLocalError("Invalid batch code. Contact your administrator.");
       return;
     }
     setLoading(true);
     try {
-      await register({ name: signupName, email: signupEmail, password: signupPassword, role: signupRole });
-      navigate("/dashboard");
+      localStorage.setItem('device_mac', macAddress.trim().toUpperCase())
+      await register({
+        name: signupName,
+        email: signupEmail,
+        password: signupPassword,
+        role: signupRole,
+        batch_code: signupRole === "technical_mentor" ? batchCode : undefined,
+        mac_address: macAddress.trim(),
+      });
     } catch {
-    
     } finally {
       setLoading(false);
     }
@@ -90,7 +109,6 @@ function Login() {
       </div>
 
       <div className="w-full max-w-[480px] relative z-10">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary to-cyan-500 rounded-[2rem] shadow-2xl shadow-primary/30 text-white mb-6">
             <Rocket size={36} />
@@ -100,29 +118,22 @@ function Login() {
         </div>
 
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-slate-900/5 dark:shadow-black/20 border border-white/50 dark:border-slate-800 overflow-hidden transition-colors">
-          {/* Tabs */}
           <div className="flex border-b border-slate-100 dark:border-slate-800">
             <button
               onClick={() => { setTab("login"); setLocalError(""); }}
               className={`flex-1 py-5 text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-                tab === "login"
-                  ? "text-primary dark:text-primary-light border-b-2 border-primary"
-                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                tab === "login" ? "text-primary dark:text-primary-light border-b-2 border-primary" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               }`}
             >
-              <LogIn size={14} />
-              Sign In
+              <LogIn size={14} /> Sign In
             </button>
             <button
               onClick={() => { setTab("signup"); setLocalError(""); }}
               className={`flex-1 py-5 text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-                tab === "signup"
-                  ? "text-primary dark:text-primary-light border-b-2 border-primary"
-                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                tab === "signup" ? "text-primary dark:text-primary-light border-b-2 border-primary" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               }`}
             >
-              <UserPlus size={14} />
-              Sign Up
+              <UserPlus size={14} /> Sign Up
             </button>
           </div>
 
@@ -143,9 +154,7 @@ function Login() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Password</label>
-                  </div>
+                  <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 px-1 uppercase tracking-widest">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -161,6 +170,29 @@ function Login() {
                   </div>
                 </div>
 
+                {/* Passphrase field — only shows when email contains "admin" */}
+                {isAdminEmail && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-violet-500 px-1 uppercase tracking-widest flex items-center gap-1">
+                      <Lock size={10} /> Admin Passphrase
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassphrase ? "text" : "password"}
+                        value={loginPassphrase}
+                        onChange={(e) => setLoginPassphrase(e.target.value)}
+                        placeholder="three-word-passphrase"
+                        required
+                        className="w-full px-6 py-4 bg-violet-50/80 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-800/40 rounded-2xl focus:ring-2 focus:ring-violet-400 transition-all outline-none text-sm font-semibold placeholder:text-slate-300 dark:placeholder:text-slate-600 dark:text-slate-200 pr-14"
+                      />
+                      <button type="button" onClick={() => setShowPassphrase(!showPassphrase)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        {showPassphrase ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-violet-500 font-semibold px-1">Admin access requires a passphrase issued by your institution.</p>
+                  </div>
+                )}
+
                 {displayError && (
                   <div className="p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl text-xs font-bold border border-rose-100 dark:border-rose-900/30">
                     {displayError}
@@ -174,9 +206,7 @@ function Login() {
 
                 <p className="text-center text-xs text-slate-400 font-medium">
                   Don't have an account?{" "}
-                  <button type="button" onClick={() => setTab("signup")} className="text-primary dark:text-primary-light font-bold hover:underline">
-                    Sign up
-                  </button>
+                  <button type="button" onClick={() => setTab("signup")} className="text-primary dark:text-primary-light font-bold hover:underline">Sign up</button>
                 </p>
               </form>
             )}
@@ -212,29 +242,29 @@ function Login() {
                   <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 px-1 uppercase tracking-widest">Role</label>
                   <select
                     value={signupRole}
-                    onChange={(e) => { setSignupRole(e.target.value); setStaffKey(""); setLocalError(""); }}
+                    onChange={(e) => { setSignupRole(e.target.value); setBatchCode(""); setLocalError(""); }}
                     className="w-full px-6 py-4 bg-slate-100/50 dark:bg-slate-800/50 border-none rounded-2xl focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-sm font-semibold dark:text-slate-200"
                   >
                     <option value="student">Student</option>
-                    <option value="teacher">Teacher / Faculty</option>
+                    <option value="technical_mentor">Technical Mentor / Faculty</option>
                   </select>
                 </div>
 
-                {signupRole === "teacher" && (
+                {signupRole === "technical_mentor" && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 px-1 uppercase tracking-widest">Staff Access Key</label>
+                    <label className="text-[10px] font-black text-amber-500 px-1 uppercase tracking-widest">Batch Code</label>
                     <div className="relative">
-                      <KeyRound size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <KeyRound size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-amber-400" />
                       <input
-                        type="password"
-                        value={staffKey}
-                        onChange={(e) => setStaffKey(e.target.value)}
-                        placeholder="Enter key provided by admin"
+                        type="text"
+                        value={batchCode}
+                        onChange={(e) => setBatchCode(e.target.value.toUpperCase())}
+                        placeholder="STAFF-2026-XXXX"
                         required
-                        className="w-full pl-12 pr-6 py-4 bg-amber-50/80 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-2xl focus:ring-2 focus:ring-amber-400 focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-sm font-semibold placeholder:text-slate-300 dark:placeholder:text-slate-600 dark:text-slate-200"
+                        className="w-full pl-12 pr-6 py-4 bg-amber-50/80 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-2xl focus:ring-2 focus:ring-amber-400 focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-sm font-semibold font-mono placeholder:text-slate-300 dark:placeholder:text-slate-600 dark:text-slate-200"
                       />
                     </div>
-                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold px-1">Faculty registration requires a key from your institution.</p>
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold px-1">Batch code is issued by your institution admin.</p>
                   </div>
                 )}
 
@@ -267,6 +297,21 @@ function Login() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-cyan-500 px-1 uppercase tracking-widest flex items-center gap-1">
+                    <Cpu size={10} /> Device MAC Address
+                  </label>
+                  <input
+                    type="text"
+                    value={macAddress}
+                    onChange={(e) => setMacAddress(e.target.value.toUpperCase())}
+                    placeholder="AA:BB:CC:DD:EE:FF"
+                    required
+                    className="w-full px-6 py-4 bg-cyan-50/80 dark:bg-cyan-900/10 border border-cyan-200 dark:border-cyan-800/40 rounded-2xl focus:ring-2 focus:ring-cyan-400 transition-all outline-none text-sm font-semibold font-mono placeholder:text-slate-300 dark:placeholder:text-slate-600 dark:text-slate-200"
+                  />
+                  <p className="text-[10px] text-cyan-600 dark:text-cyan-400 font-semibold px-1">Used for automatic WiFi check-in. Find it in your device network settings.</p>
+                </div>
+
                 {displayError && (
                   <div className="p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl text-xs font-bold border border-rose-100 dark:border-rose-900/30">
                     {displayError}
@@ -280,9 +325,7 @@ function Login() {
 
                 <p className="text-center text-xs text-slate-400 font-medium">
                   Already have an account?{" "}
-                  <button type="button" onClick={() => setTab("login")} className="text-primary dark:text-primary-light font-bold hover:underline">
-                    Sign in
-                  </button>
+                  <button type="button" onClick={() => setTab("login")} className="text-primary dark:text-primary-light font-bold hover:underline">Sign in</button>
                 </p>
               </form>
             )}

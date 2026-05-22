@@ -10,7 +10,7 @@ import { Wifi, ScanLine, Clock, CheckCircle2, XCircle, BookOpen, History } from 
 
 function MyAttendance() {
   const { user } = useContext(AuthContext);
-  const { sessions, fetchSessions, markPresent, getStudentRecords } = useContext(AttendanceContext);
+  const { sessions, fetchSessions, markPresent, getStudentRecords, fetchStudentStats } = useContext(AttendanceContext);
   const isOnline = useWifiContext();
   const [showScanner, setShowScanner] = useState(false);
   const [scanStatus, setScanStatus] = useState(null);
@@ -209,10 +209,33 @@ function MyAttendance() {
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
                             isPresent
                               ? "bg-primary/5 text-primary dark:text-primary-light"
+                              : session.status === "Active"
+                              ? "bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400"
                               : "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400"
                           }`}>
-                            {isPresent ? "✓ Present" : "Absent"}
+                            {isPresent ? "✓ Present" : session.status === "Active" ? "Not checked in" : "Absent"}
                           </span>
+                          {/* Check In button */}
+                          {session.status === "Active" && !isPresent && (
+                            <button
+                              onClick={async () => {
+                                const result = await markPresent({ sessionId: session.id, studentId: user.id, studentName: user.name, wifiConnected: false });
+                                if (result?.alreadyMarked) {
+                                  setScanStatus("error");
+                                  setScanMessage("Already marked present.");
+                                } else {
+                                  setScanStatus("success");
+                                  setScanMessage(`Checked in to "${session.session_name}" successfully!`);
+                                  getStudentRecords(user.id).then(setMyRecords);
+                                  fetchStudentStats();
+                                }
+                                setTimeout(() => setScanStatus(null), 5000);
+                              }}
+                              className="px-4 py-1.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all"
+                            >
+                              Check In
+                            </button>
+                          )}
                         </div>
                       </div>
                       {/* Check-in time if present */}

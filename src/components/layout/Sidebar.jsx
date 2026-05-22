@@ -18,12 +18,12 @@ function Sidebar() {
 
   const role = user?.role || "student";
   const isAdmin = role === "admin";
-  const isFaculty = role === "teacher";
+  const isFaculty = role === "technical_mentor";
 
   const studentMenu = [
     { name: "Home", path: "/dashboard", icon: LayoutDashboard },
     { name: "My Attendance", path: "/student/attendance", icon: Calendar },
-    { name: "Campus Hub", path: "/devices", icon: Users },
+    { name: "Campus Hub", path: "/student/attendance", icon: Users },
   ];
 
   const facultyMenu = [
@@ -34,7 +34,7 @@ function Sidebar() {
   const adminMenu = [
     { name: "Oversight", path: "/dashboard", icon: Zap },
     { name: "Analytics", path: "/admin/analytics", icon: Activity },
-    { name: "Nodes", path: "/devices", icon: Settings },
+    { name: "Nodes", path: "/admin/analytics", icon: Settings },
   ];
 
   const menu = isAdmin ? adminMenu : isFaculty ? facultyMenu : studentMenu;
@@ -59,7 +59,7 @@ function Sidebar() {
           const active = location.pathname === item.path;
           return (
             <Link
-              key={item.path}
+              key={item.name}
               to={item.path}
               className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-[13px] font-black uppercase tracking-widest transition-all duration-300 ${
                 active 
@@ -82,7 +82,7 @@ function Sidebar() {
              </div>
              <div className="flex-1 min-w-0">
                <p className={`text-xs font-black truncate uppercase tracking-tighter ${isAdmin ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{user?.name || "Student"}</p>
-               <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{isAdmin ? "Admin Root" : isFaculty ? "Faculty" : "Class of 2026"}</p>
+               <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{isAdmin ? "Admin Root" : isFaculty ? "Technical Mentor" : "Class of 2026"}</p>
              </div>
           </div>
           <button 
@@ -90,7 +90,7 @@ function Sidebar() {
             className={`w-full py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isAdmin ? 'bg-slate-800 text-slate-400 hover:bg-rose-500 hover:text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 hover:border-rose-100'}`}
           >
             <LogOut size={14} />
-            Terminate
+            LOG OUT
           </button>
         </div>
       </div>

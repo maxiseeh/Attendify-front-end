@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import Navbar from "../../components/layout/Navbar";
 import Sidebar from "../../components/layout/Sidebar";
 import QRGenerator from "../../components/attendance/QRGenerator";
@@ -17,23 +17,28 @@ function SessionManager() {
   const [location, setLocation] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
-  const [attendees, setAttendees] = useState([]);
+  const [attendees, setAttendees] = useState({ present: [], absent: [] });
   const [attendeeCounts, setAttendeeCounts] = useState({});
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
-  // fetch attendees when selected session changes
+  // fetch attendees when selected session changes + poll every 5s for live updates
+  const pollRef = useRef(null);
   useEffect(() => {
-    if (!selectedSession) { setAttendees([]); return; }
-    getSessionAttendees(selectedSession.id).then(setAttendees);
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (!selectedSession) { setAttendees({ present: [], absent: [] }); return; }
+    const load = () => getSessionAttendees(selectedSession.id).then(setAttendees);
+    load();
+    pollRef.current = setInterval(load, 5000);
+    return () => clearInterval(pollRef.current);
   }, [selectedSession]);
 
   // fetch attendee counts for all sessions
   useEffect(() => {
     if (sessions.length === 0) return;
     sessions.forEach(s => {
-      getSessionAttendees(s.id).then(list => {
-        setAttendeeCounts(prev => ({ ...prev, [s.id]: list.length }))
+      getSessionAttendees(s.id).then(data => {
+        setAttendeeCounts(prev => ({ ...prev, [s.id]: data.present?.length || 0 }))
       })
     })
   }, [sessions]);
@@ -157,7 +162,7 @@ function SessionManager() {
                       </div>
                       <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 font-medium">
                         <span className="flex items-center gap-1.5"><Clock size={12} /> {formatDate(session.created_at)}</span>
-                        <span className="flex items-center gap-1.5"><Users size={12} /> {attendeeCount} present</span>
+                      <span className="flex items-center gap-1.5"><Users size={12} /> {attendeeCount} present</span>
                         {session.closed_at && <span className="flex items-center gap-1.5 text-rose-400"><XCircle size={12} /> Ended {formatDate(session.closed_at)}</span>}
                       </div>
                     </div>
@@ -180,24 +185,34 @@ function SessionManager() {
                   <div className="glass-card p-6 dark:bg-slate-900/50 dark:border-slate-800">
                     <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                       <Users size={16} className="text-primary" />
-                      Attendees ({attendees.length})
+                      Attendees ({attendees.present.length} present · {attendees.absent.length} absent)
                     </h4>
-                    {attendees.length === 0 ? (
+                    {attendees.present.length === 0 && attendees.absent.length === 0 ? (
                       <p className="text-xs text-slate-400 font-medium">No students have checked in yet.</p>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {attendees.map((a, i) => (
+                        {attendees.present.map((a, i) => (
                           <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
                             <div>
                               <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{a.student_name}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{a.student_email}</p>
                               <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                                <Clock size={10} /> {formatDate(a.check_in_time)}
+                                <Clock size={10} /> {formatDate(a.check_in_time || a.check_in)}
                               </p>
                             </div>
                             <div className="text-right">
                               <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Present</span>
                               <p className="text-[9px] text-slate-400 mt-0.5">{a.method === "wifi" ? "📶 WiFi" : "📷 QR"}</p>
                             </div>
+                          </div>
+                        ))}
+                        {attendees.absent.map((a, i) => (
+                          <div key={`absent-${i}`} className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                            <div>
+                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{a.student_name}</p>
+                              <p className="text-[10px] text-slate-400">{a.student_email}</p>
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-400">Absent</span>
                           </div>
                         ))}
                       </div>

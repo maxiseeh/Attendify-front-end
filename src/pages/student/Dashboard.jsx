@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
 import Sidebar from "../../components/layout/Sidebar";
 import { AuthContext } from "../../AuthContext";
-import { getStudentAttendance, getSessions } from "../../services/attendanceService";
+import { AttendanceContext } from "../../AttendanceContext";
+import { getSessions, getSessionAttendance } from "../../services/attendanceService";
 import {
   CheckCircle,
   Calendar,
@@ -16,61 +17,79 @@ import {
   Cpu,
   TrendingUp,
   Target,
+  BookOpen,
 } from "lucide-react";
 
 function Dashboard() {
   const { user } = useContext(AuthContext);
+  const { studentStats, fetchStudentStats } = useContext(AttendanceContext);
   const navigate = useNavigate();
   const isAdmin = user?.role === "admin";
-  const isFaculty = user?.role === "teacher";
+  const isFaculty = user?.role === "technical_mentor";
 
   const [stats, setStats] = useState({ attended: 0, total: 0, hours: 0 });
   const [recentSessions, setRecentSessions] = useState([]);
   const [adminStats, setAdminStats] = useState({ totalStudents: 0, totalSessions: 0, avgAttendance: "0%" });
   const [adminModules, setAdminModules] = useState([]);
+  const [tmStats, setTmStats] = useState({ totalSessions: 0, totalPresent: 0, totalStudents: 0 });
+  const [tmSessions, setTmSessions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchAdminData();
-    } else {
-      fetchStudentData();
-    }
-  }, [isAdmin]);
+    if (isAdmin) fetchAdminData();
+    else if (isFaculty) fetchTmData();
+    else { fetchStudentStats(); fetchStudentData(); }
+  }, [isAdmin, isFaculty]);
 
   const fetchStudentData = async () => {
     setLoading(true);
     try {
+      const { getAllSessions: getAllSessionsApi, getStudentAttendance: getStudentAttendanceApi } = await import('../../services/attendanceService');
       const [attendanceRes, sessionsRes] = await Promise.all([
-        getStudentAttendance(user?.id || "me"),
-        getSessions(),
+        getStudentAttendanceApi(user?.id || "me"),
+        getAllSessionsApi(),
       ]);
-
       const records = attendanceRes?.data?.records || [];
-      const sessions = sessionsRes?.data?.sessions || [];
-
-      const attended = records.filter((r) => r.status === "present").length;
-      const total = sessions.length;
-      const hours = Math.round(attended * 1.5);
-
-      setStats({ attended, total, hours });
-
+      const allSessions = sessionsRes?.data?.sessions || [];
       const recent = records
         .filter((r) => r.status === "present")
         .slice(0, 3)
-        .map((r) => ({
-          id: r._id || r.id || r.session_id,
-          name: r.sessionName || r.session_name || r.session || "Session",
-          room: r.room || r.location || "Campus",
-          time: r.check_in_time || r.date
-            ? new Date(r.check_in_time || r.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-            : "—",
-          date: r.check_in_time || r.date
-            ? new Date(r.check_in_time || r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-            : "—",
-        }));
-
+        .map((r) => {
+          const session = allSessions.find(s => s.id === r.session_id);
+          return {
+            id: r.id || r.session_id,
+            name: session?.session_name || r.session_name || "Session",
+            room: session?.location || "Campus",
+            time: r.check_in ? new Date(r.check_in).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "—",
+            date: r.check_in ? new Date(r.check_in).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—",
+          };
+        });
       setRecentSessions(recent);
+    } catch {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTmData = async () => {
+    setLoading(true);
+    try {
+      const sessionsRes = await getSessions();
+      const sessions = sessionsRes?.data?.sessions || [];
+      const attendanceCounts = await Promise.all(
+        sessions.map(s => getSessionAttendance(s.id).then(r => r.data?.attendance_count || 0).catch(() => 0))
+      );
+      const totalPresent = attendanceCounts.reduce((a, b) => a + b, 0);
+      const uniqueStudents = new Set();
+      await Promise.all(
+        sessions.map(s =>
+          getSessionAttendance(s.id)
+            .then(r => (r.data?.records || []).forEach(rec => uniqueStudents.add(rec.student_id)))
+            .catch(() => {})
+        )
+      );
+      setTmStats({ totalSessions: sessions.length, totalPresent, totalStudents: uniqueStudents.size });
+      setTmSessions(sessions.slice(0, 4).map((s, i) => ({ ...s, presentCount: attendanceCounts[i] || 0 })));
     } catch {
     } finally {
       setLoading(false);
@@ -102,9 +121,9 @@ function Dashboard() {
   };
 
   const studentHighlights = [
-    { label: "Present", value: loading ? "..." : String(stats.attended), icon: CheckCircle, color: "text-primary", bg: "bg-primary/5" },
-    { label: "Total Sessions", value: loading ? "..." : String(stats.total), icon: Calendar, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-500/10" },
-    { label: "Hours Logged", value: loading ? "..." : `${stats.hours}h`, icon: Clock, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-500/10" },
+    { label: "Present", value: loading ? "..." : String(studentStats.attended), icon: CheckCircle, color: "text-primary", bg: "bg-primary/5" },
+    { label: "Total Sessions", value: loading ? "..." : String(studentStats.total), icon: Calendar, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-500/10" },
+    { label: "Hours Logged", value: loading ? "..." : `${studentStats.hours}h`, icon: Clock, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-500/10" },
   ];
 
   const adminHighlights = [
@@ -119,20 +138,57 @@ function Dashboard() {
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors">
         <Sidebar />
         <div className="flex-1 flex flex-col ml-64">
-          <Navbar title="Faculty Dashboard" />
-          <main className="p-10 flex flex-col items-center justify-center gap-6">
-            <div className="text-center">
-              <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">
-                Welcome, {user?.name || "Faculty"} 👋
-              </h2>
-              <p className="text-slate-400 font-medium">Manage your attendance sessions from the Sessions page.</p>
+          <Navbar title="TM Dashboard" />
+          <main className="p-10 space-y-10">
+            <div>
+              <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Welcome, {user?.name || "Mentor"} 👋</h2>
+              <p className="text-slate-400 font-medium mt-1">Here's an overview of your sessions.</p>
             </div>
-            <button
-              onClick={() => navigate("/faculty/sessions")}
-              className="btn-cool flex items-center gap-2 mt-4"
-            >
-              Go to Sessions
-              <ArrowRight size={18} />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { label: "Total Sessions", value: loading ? "..." : String(tmStats.totalSessions), icon: BookOpen, color: "text-primary", bg: "bg-primary/5" },
+                { label: "Total Check-ins", value: loading ? "..." : String(tmStats.totalPresent), icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+                { label: "Unique Students", value: loading ? "..." : String(tmStats.totalStudents), icon: Users, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-500/10" },
+              ].map((item, i) => (
+                <div key={i} className="glass-card p-10 flex items-center justify-between group hover:scale-[1.02] transition-transform duration-300 dark:bg-slate-900/50 dark:border-slate-800">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                    <p className="text-4xl font-black text-slate-800 dark:text-slate-100">{item.value}</p>
+                  </div>
+                  <div className={`p-5 rounded-3xl ${item.bg} ${item.color} group-hover:rotate-6 transition-transform shadow-xl`}>
+                    <item.icon size={28} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {tmSessions.length > 0 && (
+              <div className="glass-card p-8 dark:bg-slate-900/50 dark:border-slate-800">
+                <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
+                  <BarChart3 size={16} className="text-primary" /> Recent Sessions
+                </h3>
+                <div className="space-y-4">
+                  {tmSessions.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${s.is_active ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-slate-100 dark:bg-slate-800"}`}>
+                          <BookOpen size={14} className={s.is_active ? "text-emerald-500" : "text-slate-400"} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{s.session_name}</p>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-widest">{s.is_active ? "Active" : "Closed"}</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-black text-emerald-500">{s.presentCount} present</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button onClick={() => navigate("/faculty/sessions")} className="btn-cool flex items-center gap-2">
+              Manage Sessions <ArrowRight size={18} />
             </button>
           </main>
         </div>
@@ -233,7 +289,7 @@ function Dashboard() {
   }
 
   // ── STUDENT VIEW ──────────────────────────────────────────────
-  const attendancePct = stats.total > 0 ? Math.round((stats.attended / stats.total) * 100) : 0;
+  const attendancePct = studentStats.total > 0 ? Math.round((studentStats.attended / studentStats.total) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors">
@@ -248,7 +304,7 @@ function Dashboard() {
               <p className="text-slate-400 font-medium max-w-lg">
                 {attendancePct >= 75
                   ? `You're at ${attendancePct}% attendance — great work! Keep it up.`
-                  : attendancePct > 0
+                  : studentStats.attended > 0
                   ? `You're at ${attendancePct}% attendance. Try to attend more sessions!`
                   : "Welcome! Start attending sessions to track your progress."}
               </p>
